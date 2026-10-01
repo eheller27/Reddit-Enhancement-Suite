@@ -39,6 +39,38 @@ again after switching.
 
 After changing code, rerun `safari/build.sh --install` and reload the reddit tab.
 
+## Keeping it running
+
+A team-signed build survives Safari restarts and reboots with **Allow unsigned extensions** turned off. Day to day
+there is nothing to do; just keep `~/Applications/Reddit Enhancement Suite.app` installed (you never need to open it).
+
+Rebuild with `DEVELOPMENT_TEAM=XXXXXXXXXX safari/build.sh --install` when:
+
+- **Your Apple Development certificate is about to expire** (check with
+  `security find-certificate -c "Apple Development" -p | openssl x509 -noout -enddate`). Create a new one first in
+  Xcode → Settings → Accounts → Manage Certificates → **+** → Apple Development.
+- **RES disappears from Safari**, e.g. after a macOS or Safari update.
+
+Your RES settings are kept across rebuilds as long as the bundle identifier and team stay the same. To be safe, save a
+backup from RES settings → **Backup & Restore → File**.
+
+## Updating to a new RES release
+
+Merge upstream into this branch, then rebuild:
+
+```sh
+git remote add upstream https://github.com/honestbleeps/Reddit-Enhancement-Suite.git   # once
+git fetch upstream
+git merge upstream/master
+yarn
+DEVELOPMENT_TEAM=XXXXXXXXXX safari/build.sh --install
+```
+
+Reload any open reddit tabs afterwards. The Safari-specific changes are small and mostly live in `build.js`,
+`safari/`, `locales/` and `lib/environment/`, so merge conflicts should be rare. If upstream adds or removes files in
+`dist/`, add them to the extension target in the Xcode project too (the project references each built file
+individually).
+
 ## Differences from Chrome/Firefox
 
 - **History**: Safari has no `history` API. Filters based on visited links ("is visited", "comments opened") never
