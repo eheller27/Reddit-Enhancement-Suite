@@ -9,7 +9,7 @@ node build.js --mode ${MODE:-production} --browsers safari
 
 VERSION=$(node -p "require('./package.json').version")
 if [ -n "$DEVELOPMENT_TEAM" ]; then
-	SIGNING="CODE_SIGN_STYLE=Automatic DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM"
+	SIGNING="-allowProvisioningUpdates CODE_SIGN_STYLE=Automatic DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM"
 else
 	SIGNING="CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM="
 fi

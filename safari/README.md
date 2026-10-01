@@ -20,11 +20,22 @@ Then in Safari:
 4. On reddit, click the RES toolbar button → **Always Allow on This Website**
 
 The build is ad-hoc signed ("Sign to Run Locally"), and Safari turns **Allow unsigned extensions** off again each time
-it quits. To avoid that, sign with your Apple Development team (Xcode → Settings → Accounts adds a free one):
+it quits. To avoid that, sign with your Apple Development team:
+
+1. Xcode → Settings → Accounts: add your Apple ID (a free account works), select its team, then
+   **Manage Certificates… → + → Apple Development**.
+2. Check that `security find-identity -v -p codesigning` lists it. If it says `0 valid identities`, install Apple's
+   intermediate certificate: `curl -O https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer && open AppleWWDRCAG3.cer`
+3. Your team ID is the `OU` of the certificate:
+   `security find-certificate -c "Apple Development" -p | openssl x509 -noout -subject`
+4. Build with it:
 
 ```sh
 DEVELOPMENT_TEAM=XXXXXXXXXX safari/build.sh --install
 ```
+
+Safari treats the signed build as a different extension from the unsigned one, so enable it (and grant reddit access)
+again after switching.
 
 After changing code, rerun `safari/build.sh --install` and reload the reddit tab.
 
