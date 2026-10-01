@@ -1,7 +1,7 @@
 /* @flow */
 
 import { mapValues } from 'lodash-es';
-import locales from './locales';
+import { loadLocale } from './loader';
 
 // `en-ca` -> `en_CA`
 function redditLocaleToTransifexLocale(redditLocale) {
@@ -30,17 +30,19 @@ function redditLocaleToTransifexLocale(redditLocale) {
 	}
 }
 
-export function getLocaleDictionary(localeName: string): { [string]: string } {
+export async function getLocaleDictionary(localeName: string): Promise<{ [string]: string }> {
 	const transifexLocale = redditLocaleToTransifexLocale(localeName);
 
-	const mergedLocales = {
+	const [base, language, exact] = await Promise.all([
 		// 3. Default (en)
-		...locales.en,
+		loadLocale('en'),
 		// 2. Match without region (en_CA -> en)
-		...locales[transifexLocale.slice(0, transifexLocale.indexOf('_'))],
+		transifexLocale.includes('_') ? loadLocale(transifexLocale.slice(0, transifexLocale.indexOf('_'))) : undefined,
 		// 1. Exact match (en_CA -> en_CA)
-		...locales[transifexLocale],
-	};
+		loadLocale(transifexLocale),
+	]);
+
+	const mergedLocales = { ...base, ...language, ...exact };
 
 	return mapValues(mergedLocales, x => x.message);
 }

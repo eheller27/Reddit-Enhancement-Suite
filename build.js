@@ -42,6 +42,16 @@ const targets = {
 		manifest: './firefox/manifest.json',
 		noSourcemap: true,
 	},
+	safari: {
+		browserName: 'safari',
+		browserMinVersion: '18.0',
+		manifest: './safari/manifest.json',
+		noSourcemap: true,
+		// Minify and lazy-load locales: Safari tears down the background service worker aggressively,
+		// so keep what gets re-parsed on every wake (and on every page load) as small as possible.
+		minify: true,
+		lazyLocales: true,
+	},
 }
 
 const options = commander.program
@@ -74,7 +84,8 @@ const homepageURL /*: string */ = packageInfo.homepage;
 // production builds uses version number to keep the build reproducible
 const buildToken = isProduction ? version : devBuildToken;
 
-async function buildForBrowser(targetName, { manifest, noSourceMap, browserName, browserMinVersion, browserMobileMinVersion }) {
+async function buildForBrowser(targetName, { manifest, noSourceMap, browserName, browserMinVersion, browserMobileMinVersion, minify, lazyLocales }) {
+	const localeFiles = lazyLocales ? fs.readdirSync('./locales/locales').filter(f => f.endsWith('.json')) : [];
 	const context = {
 		entryPoints: {
 			'foreground.entry': './lib/foreground.entry.js',
@@ -85,7 +96,8 @@ async function buildForBrowser(targetName, { manifest, noSourceMap, browserName,
 			options: './lib/options/options.scss',
 			res: './lib/css/res.scss',
 		},
-		sourcemap: !isProduction || !noSourceMap,
+		sourcemap: !isProduction || !(noSourceMap || minify),
+		minify: isProduction && !!minify,
 		outdir: `./dist/${targetName}/`,
 		bundle: true,
 		format: 'iife',
@@ -115,6 +127,27 @@ async function buildForBrowser(targetName, { manifest, noSourceMap, browserName,
 			'process.env.homepageURL': `"${homepageURL}"`,
 		},
 		plugins: [
+			lazyLocales ? {
+				// Replace the bundled locale dictionaries with ones fetched from the extension package on demand
+				name: 'lazy-locales',
+				setup(build) {
+					// Emit the dictionaries without whitespace or the (unused) translator descriptions
+					build.onEnd(async () => {
+						const outDir = `./dist/${targetName}/locales`;
+						await fs.promises.mkdir(outDir, { recursive: true });
+						await Promise.all(localeFiles.map(async file => {
+							const dictionary = JSON.parse(await fs.promises.readFile(`./locales/locales/${file}`, 'utf8'));
+							const stripped = Object.fromEntries(Object.entries(dictionary).map(([k, { message }]) => [k, { message }]));
+							await fs.promises.writeFile(`${outDir}/${file}`, JSON.stringify(stripped));
+						}));
+					});
+					build.onResolve({ filter: /^\.\/loader$/ }, args => (
+						args.importer.endsWith(path.join('locales', 'index.js')) ?
+							{ path: path.resolve('./locales/loader.lazy.js') } :
+							undefined
+					));
+				},
+			} : undefined,
 			{
 				name: 'remove-flow-types',
 				setup(build) {

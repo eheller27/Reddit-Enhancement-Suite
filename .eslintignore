@@ -4,3 +4,7 @@
 # Vendor files
 /lib/vendor/*.js
 !/lib/vendor/index.js
+
+# Safari Xcode build output and generated container app
+/safari/build
+/safari/Reddit Enhancement Suite/Reddit Enhancement Suite/Resources
